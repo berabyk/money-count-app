@@ -3,12 +3,13 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDummyKeyForNow",
-  authDomain: "dummy-app.firebaseapp.com",
-  projectId: "dummy-app",
-  storageBucket: "dummy-app.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:dummy"
+  apiKey: "AIzaSyBDtHfMmHA5_AiDHvFw4zIUIT6HDSlnyXo",
+  authDomain: "splito-b7785.firebaseapp.com",
+  projectId: "splito-b7785",
+  storageBucket: "splito-b7785.firebasestorage.app",
+  messagingSenderId: "203730765332",
+  appId: "1:203730765332:web:68302a833abe1526234901",
+  measurementId: "G-NL9KQBT4V8"
 };
 
 // Check if we are using the dummy config

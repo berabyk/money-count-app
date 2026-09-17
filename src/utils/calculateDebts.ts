@@ -16,7 +16,7 @@ export function calculateDebts(expenses: Expense[], members: string[]): Debt[] {
       // If someone paid who is not in the list, just add them (robustness)
       paidAmounts[exp.paidBy] = exp.amount;
       if (!members.includes(exp.paidBy)) {
-        members.push(exp.paidBy);
+        console.warn("User paid but is not in members list");
       }
     }
   });

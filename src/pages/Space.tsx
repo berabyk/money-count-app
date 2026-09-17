@@ -23,14 +23,14 @@ export const Space: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      setPaidBy(user.email || user.uid);
+      setPaidBy(user.displayName || user.email || user.uid);
       fetchData();
     }
   }, [id, user]);
 
   const fetchData = async () => {
     if (!id || !user) return;
-    const userIdentifier = user.email || user.uid;
+    const userIdentifier = user.displayName || user.email || user.uid;
 
     if (isMock) {
       let spaceData = mockDb.getSpaces().find(s => s.id === id);

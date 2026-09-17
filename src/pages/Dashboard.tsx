@@ -8,7 +8,7 @@ import { mockDb } from '../utils/mockDb';
 import { PlusCircle, LogOut } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [newSpaceName, setNewSpaceName] = useState('');
@@ -26,16 +26,18 @@ export const Dashboard: React.FC = () => {
   const fetchSpaces = async () => {
     if (!user) return;
 
+    const userIdentifier = user.displayName || user.email || user.uid;
+
     if (isMock) {
       const allSpaces = mockDb.getSpaces();
-      const userSpaces = allSpaces.filter(s => s.members.includes(user.email || user.uid));
+      const userSpaces = allSpaces.filter(s => s.members.includes(userIdentifier));
       setSpaces(userSpaces);
       setLoading(false);
       return;
     }
 
     try {
-      const q = query(collection(db, 'spaces'), where('members', 'array-contains', user.email || user.uid));
+      const q = query(collection(db, 'spaces'), where('members', 'array-contains', userIdentifier));
       const querySnapshot = await getDocs(q);
       const fetchedSpaces: Space[] = [];
       querySnapshot.forEach((doc) => {
@@ -52,10 +54,12 @@ export const Dashboard: React.FC = () => {
     e.preventDefault();
     if (!newSpaceName.trim() || !user) return;
 
+    const userIdentifier = user.displayName || user.email || user.uid;
+
     const newSpaceData = {
       name: newSpaceName,
-      members: [user.email || user.uid],
-      createdBy: user.uid,
+      members: [userIdentifier],
+      createdBy: userIdentifier,
       createdAt: Date.now()
     };
 
@@ -89,7 +93,7 @@ export const Dashboard: React.FC = () => {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Bölüşme Alanlarım</h1>
           <button
-            onClick={() => { /* Logout logic */ navigate('/login'); }}
+            onClick={() => { logout(); navigate('/login'); }}
             className="flex items-center text-gray-600 hover:text-gray-900"
           >
             <LogOut className="mr-2" size={20} />

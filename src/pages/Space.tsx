@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { collection, query, where, getDocs, addDoc, doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, isMock } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import type { Space as SpaceType, Expense, Debt } from '../types';
 import { calculateDebts } from '../utils/calculateDebts';
+import { mockDb } from '../utils/mockDb';
 import { ArrowLeft, Users, Receipt, CreditCard } from 'lucide-react';
 
 export const Space: React.FC = () => {
@@ -29,6 +30,24 @@ export const Space: React.FC = () => {
 
   const fetchData = async () => {
     if (!id || !user) return;
+    const userIdentifier = user.email || user.uid;
+
+    if (isMock) {
+      let spaceData = mockDb.getSpaces().find(s => s.id === id);
+      if (!spaceData) {
+        // Auto-create for mock if someone shares a link
+        spaceData = { id, name: "Yeni Alan", members: [userIdentifier], createdBy: userIdentifier, createdAt: Date.now() };
+        mockDb.saveSpace(spaceData);
+      } else if (!spaceData.members.includes(userIdentifier)) {
+        spaceData.members.push(userIdentifier);
+        mockDb.saveSpace(spaceData);
+      }
+      setSpace(spaceData);
+      setExpenses(mockDb.getExpenses(id));
+      setLoading(false);
+      return;
+    }
+
     try {
       // Fetch space
       const spaceDoc = await getDoc(doc(db, 'spaces', id));
@@ -36,7 +55,6 @@ export const Space: React.FC = () => {
         const spaceData = { id: spaceDoc.id, ...spaceDoc.data() } as SpaceType;
 
         // Auto join if not member
-        const userIdentifier = user.email || user.uid;
         if (!spaceData.members.includes(userIdentifier)) {
           await updateDoc(doc(db, 'spaces', id), {
             members: arrayUnion(userIdentifier)
@@ -44,9 +62,6 @@ export const Space: React.FC = () => {
           spaceData.members.push(userIdentifier);
         }
         setSpace(spaceData);
-      } else {
-        // Mock fallback if space not found
-        setSpace({ id, name: "Örnek Bölüşme Alanı", members: [user.email || user.uid, "arkadas@test.com"], createdBy: "system", createdAt: Date.now() });
       }
 
       // Fetch expenses
@@ -60,12 +75,6 @@ export const Space: React.FC = () => {
 
     } catch (e) {
       console.warn("Using mock data for space and expenses");
-      const mockMembers = [user.email || user.uid, "ali@test.com", "ayse@test.com"];
-      setSpace({ id, name: "Örnek Bölüşme Alanı", members: mockMembers, createdBy: "system", createdAt: Date.now() });
-      setExpenses([
-        { id: "e1", spaceId: id, description: "Akşam Yemeği", amount: 600, paidBy: user.email || user.uid, createdAt: Date.now() },
-        { id: "e2", spaceId: id, description: "Market", amount: 300, paidBy: "ali@test.com", createdAt: Date.now() }
-      ]);
     }
     setLoading(false);
   };
@@ -78,12 +87,12 @@ export const Space: React.FC = () => {
 
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!desc || !amount || !paidBy || !id) return;
+    if (!desc || !amount || !paidBy || !id || !space) return;
 
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) return;
 
-    const newExpense = {
+    const newExpenseData = {
       spaceId: id,
       description: desc,
       amount: numAmount,
@@ -91,13 +100,28 @@ export const Space: React.FC = () => {
       createdAt: Date.now()
     };
 
+    if (isMock) {
+      const expenseWithId: Expense = { id: "exp-" + Date.now(), ...newExpenseData };
+      mockDb.saveExpense(expenseWithId);
+      setExpenses([...expenses, expenseWithId]);
+
+      if (!space.members.includes(paidBy)) {
+        const updatedSpace = { ...space, members: [...space.members, paidBy] };
+        setSpace(updatedSpace);
+        mockDb.saveSpace(updatedSpace);
+      }
+      setDesc('');
+      setAmount('');
+      return;
+    }
+
     try {
-      const docRef = await addDoc(collection(db, 'expenses'), newExpense);
-      const expenseWithId = { id: docRef.id, ...newExpense };
+      const docRef = await addDoc(collection(db, 'expenses'), newExpenseData);
+      const expenseWithId = { id: docRef.id, ...newExpenseData };
       setExpenses([...expenses, expenseWithId]);
 
       // Update members if new payer is introduced
-      if (space && !space.members.includes(paidBy)) {
+      if (!space.members.includes(paidBy)) {
         const updatedMembers = [...space.members, paidBy];
         setSpace({ ...space, members: updatedMembers });
         await updateDoc(doc(db, 'spaces', id), {
@@ -105,11 +129,7 @@ export const Space: React.FC = () => {
         });
       }
     } catch (e) {
-      const expenseWithId = { id: "mock-e-" + Date.now(), ...newExpense };
-      setExpenses([...expenses, expenseWithId]);
-      if (space && !space.members.includes(paidBy)) {
-        setSpace({ ...space, members: [...space.members, paidBy] });
-      }
+      console.error(e);
     }
 
     setDesc('');

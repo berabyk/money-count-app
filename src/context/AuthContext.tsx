@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged } from "firebase/auth";
 import type { User } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth, isMock } from '../firebase';
 
 interface AuthContextType {
   user: User | null;
@@ -17,11 +17,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // In a real app with real Firebase config, this works.
-    // Here we will use a mock user if auth fails to initialize due to mock config.
+    if (isMock) {
+      console.warn("Using mock user since Firebase config is dummy.");
+      setUser({ uid: "mock-user-123", email: "mock@example.com", displayName: "Mock User" } as User);
+      setLoading(false);
+      return;
+    }
+
     try {
       const unsubscribe = onAuthStateChanged(auth, (u) => {
-        if (!u) { setUser({ uid: "mock", email: "mock@example.com" } as User); } else { setUser(u); };
+        setUser(u);
         setLoading(false);
       });
       return unsubscribe;

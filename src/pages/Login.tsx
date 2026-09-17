@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth, isMock } from '../firebase';
 import { Wallet } from 'lucide-react';
 
 export const Login: React.FC = () => {
@@ -14,6 +14,13 @@ export const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (isMock) {
+      // Instantly bypass login with mock credentials
+      navigate('/');
+      return;
+    }
+
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
@@ -24,10 +31,6 @@ export const Login: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Authentication failed. Please check your credentials.');
-      // If we are using mock firebase config, let's just navigate.
-      if (err.message?.includes('authDomain') || err.message?.includes('api-key') || true) {
-        navigate('/');
-      }
     }
   };
 

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, isMock } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import type { Space } from '../types';
+import { mockDb } from '../utils/mockDb';
 import { PlusCircle, LogOut } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
@@ -24,6 +25,15 @@ export const Dashboard: React.FC = () => {
 
   const fetchSpaces = async () => {
     if (!user) return;
+
+    if (isMock) {
+      const allSpaces = mockDb.getSpaces();
+      const userSpaces = allSpaces.filter(s => s.members.includes(user.email || user.uid));
+      setSpaces(userSpaces);
+      setLoading(false);
+      return;
+    }
+
     try {
       const q = query(collection(db, 'spaces'), where('members', 'array-contains', user.email || user.uid));
       const querySnapshot = await getDocs(q);
@@ -33,10 +43,7 @@ export const Dashboard: React.FC = () => {
       });
       setSpaces(fetchedSpaces);
     } catch (e) {
-      console.warn("Failed to fetch from real DB, using dummy data");
-      setSpaces([
-        { id: "space1", name: "Tatil Masrafları", members: [user.email || user.uid], createdBy: user.uid, createdAt: Date.now() }
-      ]);
+      console.warn("Failed to fetch from real DB");
     }
     setLoading(false);
   };
@@ -44,20 +51,28 @@ export const Dashboard: React.FC = () => {
   const handleCreateSpace = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSpaceName.trim() || !user) return;
+
+    const newSpaceData = {
+      name: newSpaceName,
+      members: [user.email || user.uid],
+      createdBy: user.uid,
+      createdAt: Date.now()
+    };
+
+    if (isMock) {
+      const newSpace: Space = { id: "space-" + Date.now(), ...newSpaceData };
+      mockDb.saveSpace(newSpace);
+      setSpaces([...spaces, newSpace]);
+      setNewSpaceName('');
+      return;
+    }
+
     try {
-      const newSpace = {
-        name: newSpaceName,
-        members: [user.email || user.uid],
-        createdBy: user.uid,
-        createdAt: Date.now()
-      };
-      const docRef = await addDoc(collection(db, 'spaces'), newSpace);
-      setSpaces([...spaces, { id: docRef.id, ...newSpace }]);
+      const docRef = await addDoc(collection(db, 'spaces'), newSpaceData);
+      setSpaces([...spaces, { id: docRef.id, ...newSpaceData }]);
       setNewSpaceName('');
     } catch (e) {
-      console.warn("Mock creating space");
-      setSpaces([...spaces, { id: "mock-id-" + Date.now(), name: newSpaceName, members: [user.email || user.uid], createdBy: user.uid, createdAt: Date.now() }]);
-      setNewSpaceName('');
+      console.error(e);
     }
   };
 

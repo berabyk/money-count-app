@@ -5,7 +5,11 @@ import { db, isMock } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import type { Space } from '../types';
 import { mockDb } from '../utils/mockDb';
-import { PlusCircle, LogOut } from 'lucide-react';
+import { PlusCircle, LogOut, LayoutDashboard } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { ModeToggle } from '../components/mode-toggle';
 
 export const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -46,6 +50,7 @@ export const Dashboard: React.FC = () => {
       setSpaces(fetchedSpaces);
     } catch (e) {
       console.warn("Failed to fetch from real DB");
+      console.dir(e);
     }
     setLoading(false);
   };
@@ -88,85 +93,92 @@ export const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Bölüşme Alanlarım</h1>
-          <button
-            onClick={() => { logout(); navigate('/login'); }}
-            className="flex items-center text-gray-600 hover:text-gray-900"
-          >
-            <LogOut className="mr-2" size={20} />
-            Çıkış
-          </button>
-        </div>
+    <div className="min-h-screen bg-background p-4 sm:p-8">
+      <div className="max-w-4xl mx-auto space-y-8">
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800">Yeni Alan Oluştur</h2>
-            <form onSubmit={handleCreateSpace} className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Örn: Antalya Tatili"
-                value={newSpaceName}
-                onChange={(e) => setNewSpaceName(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-              <button
-                type="submit"
-                className="flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-              >
-                <PlusCircle className="mr-2" size={20} />
-                Oluştur
-              </button>
-            </form>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3 text-primary">
+            <LayoutDashboard className="h-8 w-8" />
+            <h1 className="text-3xl font-bold tracking-tight">Alanlarım</h1>
           </div>
-
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800">Mevcut Alana Katıl</h2>
-            <form onSubmit={handleJoinSpace} className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Alan ID'sini girin"
-                value={joinSpaceId}
-                onChange={(e) => setJoinSpaceId(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
-              >
-                Katıl
-              </button>
-            </form>
+          <div className="flex items-center gap-2">
+            <ModeToggle />
+            <Button variant="ghost" onClick={() => { logout(); navigate('/login'); }}>
+              <LogOut className="mr-2 h-4 w-4" /> Çıkış
+            </Button>
           </div>
         </div>
 
-        {loading ? (
-          <div className="text-center py-12">Yükleniyor...</div>
-        ) : spaces.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <p className="text-gray-500">Henüz bir bölüşme alanınız yok.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {spaces.map((space) => (
-              <Link
-                key={space.id}
-                to={`/space/${space.id}`}
-                className="block bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow"
-              >
-                <h3 className="text-xl font-bold text-indigo-600 mb-2 truncate">{space.name}</h3>
-                <p className="text-sm text-gray-500">
-                  {space.members.length} Üye
-                </p>
-                <p className="text-xs text-gray-400 mt-4">
-                  ID: {space.id} (Katılmak isteyenlere bu kodu verin)
-                </p>
-              </Link>
-            ))}
-          </div>
-        )}
+        {/* Action Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Yeni Alan Oluştur</CardTitle>
+              <CardDescription>Beraber harcama yapacağınız yeni bir grup kurun.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleCreateSpace} className="flex gap-2">
+                <Input
+                  placeholder="Örn: Antalya Tatili"
+                  value={newSpaceName}
+                  onChange={(e) => setNewSpaceName(e.target.value)}
+                  className="flex-1"
+                />
+                <Button type="submit">
+                  <PlusCircle className="mr-2 h-4 w-4" /> Oluştur
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Mevcut Alana Katıl</CardTitle>
+              <CardDescription>Arkadaşınızdan aldığınız kod ile bir alana katılın.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleJoinSpace} className="flex gap-2">
+                <Input
+                  placeholder="Alan ID'sini girin"
+                  value={joinSpaceId}
+                  onChange={(e) => setJoinSpaceId(e.target.value)}
+                  className="flex-1"
+                />
+                <Button variant="secondary" type="submit">Katıl</Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Spaces List */}
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight mb-4">Grup ve Tatillerim</h2>
+          {loading ? (
+            <div className="text-center py-12 text-muted-foreground">Yükleniyor...</div>
+          ) : spaces.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                <LayoutDashboard className="h-12 w-12 mb-4 opacity-20" />
+                <p>Henüz bir bölüşme alanınız yok.</p>
+                <p className="text-sm">Yukarıdan yeni bir tane oluşturabilirsiniz.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {spaces.map((space) => (
+                <Link key={space.id} to={`/space/${space.id}`}>
+                  <Card className="h-full hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer border-l-4 border-l-primary">
+                    <CardHeader>
+                      <CardTitle className="truncate">{space.name}</CardTitle>
+                      <CardDescription>{space.members.length} Üye</CardDescription>
+                    </CardHeader>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

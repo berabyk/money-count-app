@@ -6,11 +6,12 @@ import { useAuth } from '../context/AuthContext';
 import type { Space as SpaceType, Expense, Debt } from '../types';
 import { calculateDebts } from '../utils/calculateDebts';
 import { mockDb } from '../utils/mockDb';
-import { ArrowLeft, Users, Receipt, CreditCard, UserPlus, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Users, Receipt, CreditCard, UserPlus, Copy, Check, Calendar, ChevronRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { ModeToggle } from '../components/mode-toggle';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 
 export const Space: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -172,6 +173,13 @@ export const Space: React.FC = () => {
 
   const totalSpent = expenses.reduce((acc, curr) => acc + curr.amount, 0);
 
+  // Group expenses by member
+  const memberTotals = space.members.map(member => {
+    const memberExpenses = expenses.filter(e => e.paidBy === member);
+    const total = memberExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+    return { member, total };
+  }).sort((a, b) => b.total - a.total);
+
   return (
     <div className="min-h-screen bg-background p-4 sm:p-8">
       <div className="max-w-5xl mx-auto space-y-6">
@@ -274,25 +282,102 @@ export const Space: React.FC = () => {
             </Card>
 
             <Card>
-              <CardHeader className="pb-0">
-                <CardTitle className="text-xl">Geçmiş Harcamalar</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between pb-0 border-b pb-4">
+                <CardTitle className="text-xl">Kişiler ve Harcamaları</CardTitle>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="hidden sm:flex">
+                      <Calendar className="mr-2 h-4 w-4" /> Tüm Harcama Geçmişi
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Tüm Harcama Geçmişi</DialogTitle>
+                    </DialogHeader>
+                    <div className="mt-4">
+                      {expenses.length === 0 ? (
+                        <p className="text-muted-foreground text-center py-4">Henüz harcama eklenmedi.</p>
+                      ) : (
+                        <ul className="space-y-4">
+                          {expenses.slice().reverse().map(exp => (
+                            <li key={exp.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                              <div>
+                                <p className="font-medium">{exp.description}</p>
+                                <div className="flex items-center text-xs text-muted-foreground mt-1 gap-2">
+                                  <span className="font-medium text-foreground">{exp.paidBy}</span>
+                                  <span>•</span>
+                                  <span>{new Date(exp.createdAt).toLocaleString('tr-TR')}</span>
+                                </div>
+                              </div>
+                              <span className="font-semibold">{exp.amount.toFixed(2)} TL</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </CardHeader>
               <CardContent className="pt-6">
-                {expenses.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">Henüz harcama eklenmedi.</p>
-                ) : (
-                  <ul className="divide-y divide-border">
-                    {expenses.slice().reverse().map(exp => (
-                      <li key={exp.id} className="py-4 flex justify-between items-center gap-4">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate">{exp.description}</p>
-                          <p className="text-sm text-muted-foreground truncate">Ödeyen: {exp.paidBy}</p>
+                <ul className="divide-y divide-border">
+                  {memberTotals.map((mt) => (
+                    <li key={mt.member}>
+                      <Link
+                        to={`/space/${id}/member/${encodeURIComponent(mt.member)}`}
+                        className="py-4 flex justify-between items-center gap-4 hover:bg-muted/50 px-2 -mx-2 rounded-md transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                            {mt.member.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-medium">{mt.member}</p>
+                            <p className="text-sm text-muted-foreground">Detayları gör</p>
+                          </div>
                         </div>
-                        <span className="font-semibold whitespace-nowrap">{exp.amount.toFixed(2)} TL</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                        <div className="flex items-center gap-4">
+                          <span className="font-semibold text-lg">{mt.total.toFixed(2)} TL</span>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-4 sm:hidden">
+                   <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="w-full">
+                        <Calendar className="mr-2 h-4 w-4" /> Tüm Harcama Geçmişi
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto w-[90vw]">
+                      <DialogHeader>
+                        <DialogTitle>Tüm Harcama Geçmişi</DialogTitle>
+                      </DialogHeader>
+                      <div className="mt-4">
+                        {expenses.length === 0 ? (
+                          <p className="text-muted-foreground text-center py-4">Henüz harcama eklenmedi.</p>
+                        ) : (
+                          <ul className="space-y-4">
+                            {expenses.slice().reverse().map(exp => (
+                              <li key={exp.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                                <div>
+                                  <p className="font-medium">{exp.description}</p>
+                                  <div className="flex items-center text-xs text-muted-foreground mt-1 gap-2">
+                                    <span className="font-medium text-foreground">{exp.paidBy}</span>
+                                    <span>•</span>
+                                    <span>{new Date(exp.createdAt).toLocaleString('tr-TR')}</span>
+                                  </div>
+                                </div>
+                                <span className="font-semibold">{exp.amount.toFixed(2)} TL</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </CardContent>
             </Card>
 

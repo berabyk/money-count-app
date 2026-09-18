@@ -4,6 +4,7 @@ import { ThemeProvider } from './components/theme-provider';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Space } from './pages/Space';
+import { MemberDetail } from './pages/MemberDetail';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Dashboard />} />
             <Route path="/space/:id" element={<Space />} />
+            <Route path="/space/:id/member/:memberName" element={<MemberDetail />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
